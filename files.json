@@ -1,0 +1,4 @@
+{
+  "_comment": "可选的外部清单：想不碰 index.html 就加说明/标签时用。和 index.html 放同一目录，页面会自动读。字段都可省略，只有 name 必填；path 不填 = filesPath + name。只想自动列目录的话，files 留空数组就行。",
+  "files": []
+}

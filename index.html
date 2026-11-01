@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>文件下载中心</title>
+<meta name="description" content="一个纯静态的文件下载页面，放在 GitHub 上即可给别人下载你的文件。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f6bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7.5 4.27 9 5.15'/%3E%3Cpath d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/%3E%3Cpath d='m3.3 7 8.7 5 8.7-5'/%3E%3Cpath d='M12 22V12'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   主题变量：浅色 / 深色，跟随系统，可手动切换
+   ============================================================ */
+:root {
+  --bg: #f5f7fb;
+  --bg-grad-1: #e8efff;
+  --bg-grad-2: #f7f0ff;
+  --surface: rgba(255, 255, 255, .78);
+  --surface-solid: #ffffff;
+  --surface-hover: rgba(255, 255, 255, .95);
+  --border: rgba(16, 24, 40, .10);
+  --border-strong: rgba(16, 24, 40, .18);
+  --text: #101828;
+  --text-soft: #475467;
+  --text-mute: #8b93a5;
+  --accent: #2f6bff;
+  --accent-soft: rgba(47, 107, 255, .10);
+  --accent-2: #7a5cff;
+  --ok: #12b76a;
+  --warn: #f79009;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 8px 24px -8px rgba(16, 24, 40, .12);
+  --shadow-lg: 0 2px 6px rgba(16, 24, 40, .06), 0 20px 48px -16px rgba(16, 24, 40, .22);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+html[data-theme="dark"] {
+  --bg: #0b0f17;
+  --bg-grad-1: #101a2e;
+  --bg-grad-2: #1a1030;
+  --surface: rgba(22, 28, 40, .72);
+  --surface-solid: #161c28;
+  --surface-hover: rgba(30, 38, 54, .92);
+  --border: rgba(255, 255, 255, .10);
+  --border-strong: rgba(255, 255, 255, .20);
+  --text: #eef2f8;
+  --text-soft: #a9b4c7;
+  --text-mute: #7b8698;
+  --accent: #6f9bff;
+  --accent-soft: rgba(111, 155, 255, .16);
+  --accent-2: #a58cff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -8px rgba(0, 0, 0, .6);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, .5), 0 20px 48px -16px rgba(0, 0, 0, .75);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  background-image:
+    radial-gradient(1100px 520px at 12% -8%, var(--bg-grad-1), transparent 62%),
+    radial-gradient(900px 480px at 92% 4%, var(--bg-grad-2), transparent 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+a { color: inherit; }
+button, input, select { font: inherit; color: inherit; }
+::selection { background: var(--accent); color: #fff; }
+
+.wrap { width: min(1180px, 100% - 40px); margin: 0 auto; }
+
+/* ---------------- 顶栏 ---------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-inner {
+  display: flex; align-items: center; gap: 14px;
+  min-height: 64px;
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.logo {
+  width: 34px; height: 34px; flex: 0 0 auto;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+.logo svg { width: 19px; height: 19px; }
+.brand h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: .2px; white-space: nowrap; }
+.brand .sub { font-size: 12px; color: var(--text-mute); white-space: nowrap; }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.icon-btn {
+  width: 38px; height: 38px; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: 10px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-soft);
+  transition: background .18s, color .18s, border-color .18s, transform .18s;
+}
+.icon-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.icon-btn:active { transform: scale(.96); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* ---------------- 头部大标题 ---------------- */
+.hero { padding: 40px 0 10px; }
+.hero h2 {
+  margin: 0 0 6px; font-size: clamp(22px, 3.4vw, 32px);
+  letter-spacing: -.4px; font-weight: 720;
+}
+.hero p { margin: 0; color: var(--text-soft); font-size: 14px; }
+.hero .stats { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+  font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-soft);
+}
+.pill b { color: var(--text); font-weight: 650; }
+
+/* ---------------- 工具条 ---------------- */
+.toolbar {
+  margin: 20px 0 0; padding: 12px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+.search {
+  flex: 1 1 280px; min-width: 200px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px; height: 42px;
+  background: var(--surface-solid); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color .18s, box-shadow .18s;
+}
+.search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.search svg { width: 16px; height: 16px; color: var(--text-mute); flex: 0 0 auto; }
+.search input {
+  border: 0; outline: 0; background: transparent; width: 100%; height: 100%;
+  font-size: 14px;
+}
+.search input::placeholder { color: var(--text-mute); }
+.search kbd {
+  font: inherit; font-size: 11px; color: var(--text-mute);
+  border: 1px solid var(--border-strong); border-bottom-width: 2px;
+  border-radius: 5px; padding: 1px 5px; flex: 0 0 auto;
+}
+.select {
+  height: 42px; padding: 0 10px; cursor: pointer;
+  background: var(--surface-solid); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px; color: var(--text-soft);
+  outline: none;
+}
+.select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ---------------- 标签筛选 ---------------- */
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+.tag {
+  cursor: pointer; user-select: none;
+  font-size: 12.5px; padding: 6px 13px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-soft);
+  transition: all .18s;
+}
+.tag:hover { border-color: var(--border-strong); color: var(--text); }
+.tag[aria-pressed="true"] {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 6px 16px -8px var(--accent);
+}
+
+/* ---------------- 文件网格 ---------------- */
+.grid {
+  margin: 22px 0 0;
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  padding-bottom: 40px;
+}
+.card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  backdrop-filter: blur(8px);
+}
+.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
+.card-head { display: flex; align-items: flex-start; gap: 12px; }
+.badge {
+  width: 44px; height: 44px; flex: 0 0 auto;
+  border-radius: 12px; display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; letter-spacing: .4px;
+  color: #fff; text-transform: uppercase;
+  background: linear-gradient(135deg, #8f9bb3, #6b7688);
+}
+.badge.zip  { background: linear-gradient(135deg, #f79009, #f04438); }
+.badge.exe  { background: linear-gradient(135deg, #2f6bff, #12b76a); }
+.badge.pdf  { background: linear-gradient(135deg, #f04438, #b42318); }
+.badge.img  { background: linear-gradient(135deg, #12b76a, #0ba5ec); }
+.badge.video{ background: linear-gradient(135deg, #7a5cff, #f04438); }
+.badge.audio{ background: linear-gradient(135deg, #ee46bc, #7a5cff); }
+.badge.doc  { background: linear-gradient(135deg, #2e90fa, #2f6bff); }
+.badge.code { background: linear-gradient(135deg, #101828, #344054); }
+.badge.txt  { background: linear-gradient(135deg, #667085, #98a2b3); }
+
+.card-title { min-width: 0; flex: 1 1 auto; }
+.card-title h3 {
+  margin: 0; font-size: 14.5px; font-weight: 650; line-height: 1.35;
+  word-break: break-all;
+}
+.card-title .meta {
+  margin-top: 2px; font-size: 11.5px; color: var(--text-mute);
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+.card-title .meta .dot { opacity: .5; }
+.desc {
+  margin: 0; font-size: 12.5px; color: var(--text-soft);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 11px; padding: 2px 8px; border-radius: 6px;
+  background: var(--accent-soft); color: var(--accent);
+}
+.card-actions {
+  margin-top: auto; display: flex; gap: 8px; align-items: center;
+  padding-top: 4px;
+}
+.btn {
+  height: 36px; padding: 0 14px; border-radius: var(--radius-sm);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer;
+  border: 1px solid transparent; transition: all .18s; white-space: nowrap;
+}
+.btn svg { width: 15px; height: 15px; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; box-shadow: 0 8px 18px -10px var(--accent);
+}
+.btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn-ghost {
+  background: transparent; border-color: var(--border-strong); color: var(--text-soft);
+  padding: 0 10px;
+}
+.btn-ghost:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.btn[disabled] { opacity: .5; pointer-events: none; }
+.spacer { flex: 1 1 auto; }
+
+.sha {
+  margin-top: 2px; padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 10.5px; color: var(--text-mute);
+}
+.sha code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all; line-height: 1.45;
+}
+
+/* ---------------- 空状态 / 骨架 ---------------- */
+.empty {
+  grid-column: 1 / -1;
+  padding: 56px 20px; text-align: center;
+  border: 1px dashed var(--border-strong); border-radius: var(--radius);
+  color: var(--text-mute); background: var(--surface);
+}
+.empty .big {
+  width: 56px; height: 56px; margin: 0 auto 12px;
+  border-radius: 16px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+}
+.empty .big svg { width: 26px; height: 26px; }
+.empty h3 { margin: 0 0 4px; color: var(--text); font-size: 15px; }
+.empty p { margin: 0; font-size: 13px; }
+.empty code {
+  background: var(--accent-soft); color: var(--accent);
+  padding: 1px 6px; border-radius: 5px; font-size: 12px;
+}
+
+.skeleton-card { height: 168px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); overflow: hidden; position: relative; }
+.skeleton-card::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
+  transform: translateX(-100%); animation: shimmer 1.3s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* ---------------- 页脚 ---------------- */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 22px 0 34px;
+  color: var(--text-mute); font-size: 12.5px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+footer a { color: var(--text-soft); text-decoration: none; border-bottom: 1px dashed var(--border-strong); }
+footer a:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---------------- 提示条 ---------------- */
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 24px);
+  background: var(--text); color: var(--bg);
+  padding: 10px 18px; border-radius: 999px;
+  font-size: 13px; font-weight: 550;
+  box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+  transition: opacity .22s, transform .22s; z-index: 60;
+  max-width: min(520px, 92vw); text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------------- 回到顶部 ---------------- */
+.to-top {
+  position: fixed; right: 22px; bottom: 22px; z-index: 40;
+  width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: var(--surface-solid); border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg); color: var(--text-soft);
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+}
+.to-top.show { opacity: 1; pointer-events: auto; }
+.to-top:hover { color: var(--accent); transform: translateY(-2px); }
+
+@media (max-width: 560px) {
+  .wrap { width: calc(100% - 24px); }
+  .brand .sub { display: none; }
+  .hero { padding-top: 26px; }
+  .grid { grid-template-columns: 1fr; }
+  .card-actions .btn-text { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <div class="logo" id="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      </div>
+      <div>
+        <h1 id="site-title">文件下载中心</h1>
+        <div class="sub" id="site-sub">点开即下 · 无需登录</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="repo-btn" title="打开 GitHub 仓库" aria-label="打开 GitHub 仓库">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </button>
+      <button class="icon-btn" id="theme-btn" title="切换深色 / 浅色" aria-label="切换深色浅色">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h2 id="hero-title">所有文件，一键下载</h2>
+    <p id="hero-desc">直接点击下载即可，无需注册、无需等待。文件由 GitHub 提供加速，链接永久有效。</p>
+    <div class="stats">
+      <span class="pill">共 <b id="stat-total">0</b> 个文件</span>
+      <span class="pill">总大小 <b id="stat-size">0 B</b></span>
+      <span class="pill" id="stat-source">来源：仓库文件</span>
+    </div>
+  </section>
+
+  <section class="toolbar" role="search">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="搜索文件名、说明或标签…" autocomplete="off" spellcheck="false" aria-label="搜索文件">
+      <kbd>/</kbd>
+    </label>
+    <select class="select" id="sort" aria-label="排序方式">
+      <option value="default">默认顺序</option>
+      <option value="name">按名称</option>
+      <option value="size-desc">按大小（从大到小）</option>
+      <option value="size-asc">按大小（从小到大）</option>
+      <option value="date-desc">按时间（最新在前）</option>
+    </select>
+    <button class="icon-btn" id="refresh-btn" title="重新加载文件列表" aria-label="重新加载文件列表">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    </button>
+  </section>
+
+  <nav class="tags" id="tags" aria-label="按标签筛选"></nav>
+
+  <section class="grid" id="grid" aria-live="polite" aria-busy="true">
+    <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>© <span id="year">2026</span> <span id="footer-name">文件下载中心</span></span>
+  <span class="spacer"></span>
+  <a id="footer-repo" href="#" target="_blank" rel="noopener">GitHub 仓库</a>
+  <a href="https://pages.github.com/" target="_blank" rel="noopener">由 GitHub Pages 托管</a>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<button class="to-top" id="to-top" title="回到顶部" aria-label="回到顶部">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
+</button>
+
+<noscript>
+  <div class="wrap" style="padding:24px 0">
+    <div class="empty"><div class="big">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+    </div><h3>需要开启 JavaScript</h3>
+    <p>这个页面用 JavaScript 生成文件列表，请允许运行后刷新。</p></div>
+  </div>
+</noscript>
+
+<script>
+"use strict";
+
+/* ============================================================================
+ * ① 配置区 —— 改这里就够了
+ * ============================================================================
+ * owner / repo ：你的 GitHub 用户名和仓库名（页面右下角的仓库链接也用它）
+ * branch        ：文件所在分支，通常是 main
+ * filesPath     ：仓库里放文件的目录名（相对仓库根目录，根目录就写 ""）
+ * mode          ：
+ *   "repo"      —— 从仓库里的文件下载（单文件 < 100 MB，走 github.com/…/raw/… 强制下载）
+ *   "release"   —— 从 Releases 附件下载（单文件 < 2 GB，发布大文件用这个）
+ *   "both"      —— 两种都列出来
+ * autoList      ：true = 自动列出仓库目录里（或 Release 里）的所有文件，不用手抄清单
+ * files         ：手工清单。autoList 打开后，这里仍会合并显示（可用来写说明、排序）
+ * mirrors       ：国内加速镜像前缀。留空数组 = 不显示。示例见 README
+ * ========================================================================== */
+const SITE = {
+  title: "文件下载中心",
+  subtitle: "点开即下 · 无需登录",
+  heroTitle: "所有文件，一键下载",
+  heroDesc: "直接点击下载即可，无需注册、无需等待。文件由 GitHub 托管，链接永久有效。",
+
+  owner: "qingqiu123-my",      // ← 你的 GitHub 用户名
+  repo: "keep-",               // ← 仓库名（就是 keep- 后面带一个横杠）
+  branch: "main",
+  filesPath: "files",          // ← 仓库里放文件的目录，根目录写 ""
+  mode: "repo",                // "repo" | "release" | "both"
+  releaseTag: "",              // 留空 = 自动使用最新 Release
+
+  autoList: true,              // true = 丢进仓库就自动出现；改 false 则只用下面的手工清单
+  showSha256: true,            // 清单里写了 sha256 时显示校验值（方便别人核对）
+
+  mirrors: [],                 // 例：[{ label: "ghproxy", prefix: "https://ghproxy.net/" }]
+
+  // 手工清单：name 必填，其余可选；path 不填则用 filesPath + name
+  // autoList 已打开，这里留空就行——文件会从仓库自动列出来。
+  files: []
+};
+
+/* ============================================================================
+ * ② 工具函数
+ * ========================================================================== */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+
+function formatSize(bytes) {
+  const n = Number(bytes);
+  if (!isFinite(n) || n <= 0) return "—";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0, v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return (i === 0 ? v : v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)) + " " + units[i];
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  const p = (x) => String(x).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+
+function extOf(name) {
+  const m = /\.([A-Za-z0-9]{1,10})$/.exec(String(name || "").trim());
+  return m ? m[1].toLowerCase() : "";
+}
+
+/* 图标统一用内联 SVG：不依赖系统 emoji 字体，任何机器上都不会变成方框 */
+const ICON = {
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+};
+
+const BADGE_CLASS = {
+  zip: "zip", rar: "zip", "7z": "zip", gz: "zip", tar: "zip", xz: "zip", zst: "zip", apk: "zip", ipa: "zip",
+  exe: "exe", msi: "exe", dmg: "exe", deb: "exe", appimage: "exe", bat: "exe", cmd: "exe",
+  pdf: "pdf",
+  png: "img", jpg: "img", jpeg: "img", gif: "img", webp: "img", svg: "img", bmp: "img", ico: "img", avif: "img",
+  mp4: "video", mkv: "video", mov: "video", webm: "video", avi: "video", flv: "video",
+  mp3: "audio", flac: "audio", wav: "audio", m4a: "audio", ogg: "audio", aac: "audio",
+  doc: "doc", docx: "doc", xls: "doc", xlsx: "doc", ppt: "doc", pptx: "doc", odt: "doc", csv: "doc",
+  js: "code", ts: "code", py: "code", json: "code", html: "code", css: "code", java: "code",
+  c: "code", cpp: "code", go: "code", rs: "code", sh: "code", yml: "code", yaml: "code", xml: "code",
+  txt: "txt", md: "txt", log: "txt", ini: "txt", conf: "txt"
+};
+
+/* 浏览器会「就地打开」而不是下载的类型（文本类），点下载时改开新标签页 */
+const INLINE_EXT = new Set([
+  "txt", "md", "markdown", "json", "jsonl", "js", "mjs", "cjs", "ts", "css", "scss",
+  "html", "htm", "xml", "yml", "yaml", "csv", "tsv", "log", "ini", "conf", "cfg",
+  "py", "sh", "bat", "ps1", "java", "c", "cpp", "h", "go", "rs", "php", "rb", "sql"
+]);
+
+function badgeOf(name) {
+  const ext = extOf(name);
+  const cls = BADGE_CLASS[ext] || "txt";
+  const label = ext ? ext.slice(0, 4) : "FILE";
+  return '<span class="badge ' + cls + '">' + esc(label) + "</span>";
+}
+
+/* 仓库内文件的公开下载地址：github.com/…/raw/…（会 302 到 raw.githubusercontent.com）
+   二进制文件（zip/exe/pdf…）浏览器会直接下载；纯文本类会就地显示，所以见 INLINE_EXT。 */
+function repoRawUrl(path) {
+  const clean = String(path || "").replace(/^\/+/, "");
+  return "https://github.com/" + SITE.owner + "/" + SITE.repo +
+         "/raw/" + SITE.branch + "/" + clean.split("/").map(encodeURIComponent).join("/");
+}
+function releaseUrl(tag, name) {
+  return "https://github.com/" + SITE.owner + "/" + SITE.repo +
+         "/releases/download/" + encodeURIComponent(tag) + "/" + encodeURIComponent(name);
+}
+function blobUrl(path) {
+  const clean = String(path || "").replace(/^\/+/, "");
+  return "https://github.com/" + SITE.owner + "/" + SITE.repo + "/blob/" + SITE.branch + "/" + clean;
+}
+function repoHome() {
+  return "https://github.com/" + SITE.owner + "/" + SITE.repo;
+}
+
+/* ============================================================================
+ * ③ 数据加载：手工清单 + 自动列目录（可选）
+ * ========================================================================== */
+let allFiles = [];
+let activeTags = new Set();
+
+function filePathOf(item) {
+  if (item.path) return item.path;
+  const dir = SITE.filesPath ? SITE.filesPath.replace(/\/+$/, "") + "/" : "";
+  return dir + item.name;
+}
+
+function normalize(entry, source) {
+  const name = String(entry.name || "").trim();
+  if (!name) return null;
+  const tags = Array.isArray(entry.tags) ? entry.tags.filter(Boolean) : [];
+  if (source === "release") tags.push("Release");
+  const item = {
+    name: name,
+    desc: entry.desc || "",
+    size: Number(entry.size) || 0,
+    date: entry.date || "",
+    tags: tags,
+    path: filePathOf(entry),
+    sha256: entry.sha256 || "",
+    source: source || SITE.mode
+  };
+  if (item.source === "release") {
+    item.downloadUrl = entry.downloadUrl || releaseUrl(entry.tag || SITE.releaseTag, name);
+    item.viewUrl = repoHome() + "/releases";
+    item.tag = entry.tag || SITE.releaseTag;
+  } else {
+    item.downloadUrl = repoRawUrl(item.path);
+    item.viewUrl = blobUrl(item.path);
+  }
+  // 手动指定地址（网盘、自有 CDN 等）优先于自动生成的 GitHub 链接
+  if (entry.downloadUrl) item.downloadUrl = String(entry.downloadUrl);
+  if (entry.url) item.downloadUrl = String(entry.url);
+  if (entry.viewUrl) item.viewUrl = String(entry.viewUrl);
+  return item;
+}
+
+/* 自动列出仓库目录：GitHub 公开 API，匿名每小时 60 次，够个人用 */
+const SITE_FILE_RE = /^(index\.html|files\.json|readme(\.[a-z0-9]+)?|license(\.[a-z0-9]+)?|cname|favicon\.ico|\.gitkeep|\.nojekyll)$/i;
+
+async function fetchContents(dir) {
+  const api = "https://api.github.com/repos/" + SITE.owner + "/" + SITE.repo +
+              "/contents/" + dir + "?ref=" + encodeURIComponent(SITE.branch);
+  let res;
+  try {
+    res = await fetch(api, { headers: { Accept: "application/vnd.github+json" } });
+  } catch (_) {
+    throw new Error("连不上 GitHub（网络或代理问题）");
+  }
+  if (res.status === 404) return { status: 404, list: [] };          // 目录不存在 / 仓库还是空的
+  if (res.status === 403 || res.status === 429) {
+    throw new Error("GitHub 接口调用次数用完了（匿名每小时 60 次），过一会儿再刷新");
+  }
+  if (!res.ok) throw new Error("列出仓库目录失败：HTTP " + res.status);
+  const data = await res.json();
+  return { status: 200, list: Array.isArray(data) ? data : [] };
+}
+
+/* 列目录结果在本地缓存 10 分钟：省 GitHub 匿名额度，限流时还能拿旧数据兜底 */
+const LIST_CACHE_TTL = 10 * 60 * 1000;
+function listCacheKey() {
+  return "dl-list:" + SITE.owner + "/" + SITE.repo + "@" + SITE.branch + ":" + (SITE.filesPath || "");
+}
+function readListCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return obj && Array.isArray(obj.items) && obj.ts ? obj : null;
+  } catch (_) {
+    return null;
+  }
+}
+function writeListCache(key, items) {
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      ts: Date.now(),
+      items: items.map((f) => ({
+        name: f.name, path: f.path, size: f.size, date: f.date,
+        source: f.source, tag: f.tag, downloadUrl: f.downloadUrl, viewUrl: f.viewUrl, tags: []
+      }))
+    }));
+  } catch (_) { /* 隐私模式 / 配额满就跳过缓存 */ }
+}
+
+/* 备用数据源：jsDelivr 的扁平文件列表，几乎不限流，但没有修改时间，超大仓库会被拒 */
+async function listViaJsdelivr(dir) {
+  const api = "https://data.jsdelivr.com/v1/packages/gh/" + SITE.owner + "/" + SITE.repo +
+              "@" + SITE.branch + "?structure=flat";
+  const res = await fetch(api);
+  if (!res.ok) throw new Error("备用接口也失败了：HTTP " + res.status);
+  const data = await res.json();
+  const all = Array.isArray(data.files) ? data.files : [];
+  if (!all.length) return [];   // 空仓库 / 仓库不存在，交给页面显示空状态
+  const prefix = dir ? "/" + dir + "/" : "/";
+  return all
+    .filter((f) => typeof f.name === "string" && f.name.indexOf(prefix) === 0)
+    .filter((f) => {
+      const rel = f.name.slice(prefix.length);
+      return rel && rel.indexOf("/") === -1 && !/^\./.test(rel)
+        && !(prefix === "/" && SITE_FILE_RE.test(rel));
+    })
+    .map((f) => normalize({ name: f.name.slice(prefix.length), path: f.name.slice(1), size: f.size, tags: [] }, "repo"))
+    .filter(Boolean);
+}
+
+async function listRepoFiles(force) {
+  const dir = String(SITE.filesPath || "").replace(/^\/+|\/+$/g, "");
+  const key = listCacheKey();
+  const cached = force ? null : readListCache(key);
+  if (cached && Date.now() - cached.ts < LIST_CACHE_TTL) return cached.items;
+
+  let items = [];
+  try {
+    let base = dir;
+    let got = await fetchContents(dir);
+    // files/ 还没建的时候，退一步列仓库根目录：把文件丢在根上也能显示
+    if (got.status === 404 && dir) {
+      got = await fetchContents("");
+      base = "";
+    }
+    if (got.status !== 404) {   // 404 = 空仓库，什么都还没有
+      items = got.list
+        .filter((it) => it.type === "file"
+          && !/^\./.test(it.name)
+          && !(base === "" && SITE_FILE_RE.test(it.name)))
+        .map((it) => normalize({
+          name: it.name,
+          path: base ? base + "/" + it.name : it.name,
+          size: it.size,
+          tags: []
+        }, "repo"))
+        .filter(Boolean);
+    }
+  } catch (err) {
+    // GitHub 挂了 / 匿名额度用完：先用 jsDelivr 顶上，再不行就退回旧缓存
+    try {
+      items = await listViaJsdelivr(dir);
+    } catch (_) {
+      if (cached) return cached.items;
+      throw err;
+    }
+  }
+  writeListCache(key, items);
+  return items;
+}
+
+/* 自动列出最新 Release 的附件 */
+async function listReleaseFiles() {
+  const tag = SITE.releaseTag ? "tags/" + encodeURIComponent(SITE.releaseTag) : "latest";
+  const api = "https://api.github.com/repos/" + SITE.owner + "/" + SITE.repo + "/releases/" + tag;
+  const res = await fetch(api, { headers: { Accept: "application/vnd.github+json" } });
+  if (!res.ok) throw new Error("读取 Release 失败：HTTP " + res.status);
+  const rel = await res.json();
+  const realTag = rel.tag_name || SITE.releaseTag;
+  return (rel.assets || []).map((a) => normalize({
+    name: a.name,
+    size: a.size,
+    date: a.updated_at || a.created_at,
+    desc: rel.name || rel.tag_name || "",
+    tags: [],
+    tag: realTag,
+    downloadUrl: a.browser_download_url
+  }, "release")).filter(Boolean);
+}
+
+/* 可选：外部 files.json（不想把清单写进 HTML 时用） */
+async function loadExternalList() {
+  try {
+    const res = await fetch("files.json", { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.files) ? data.files : []);
+    return arr.map((e) => normalize(e, "repo")).filter(Boolean);
+  } catch (_) {
+    return [];   // 没有 files.json（或 file:// 打开）时静默跳过
+  }
+}
+
+async function buildList(force) {
+  const manual = SITE.files.map((e) => normalize(e, "repo")).filter(Boolean);
+  const external = await loadExternalList();
+  let auto = [];
+  let autoError = "";
+
+  if (SITE.autoList) {
+    try {
+      if (SITE.mode === "release") auto = await listReleaseFiles();
+      else if (SITE.mode === "both") auto = (await listRepoFiles(force)).concat(await listReleaseFiles());
+      else auto = await listRepoFiles(force);
+    } catch (err) {
+      autoError = err && err.message ? err.message : String(err);
+    }
+  }
+
+  // 合并：自动列出的放前面；同名以自动的为准（拿到的是真实大小）
+  const seen = new Map();
+  auto.concat(external, manual).forEach((f) => {
+    const key = (f.source === "release" ? "rel:" : "repo:") + f.name.toLowerCase();
+    const prev = seen.get(key);
+    if (!prev) { seen.set(key, f); return; }
+    // 手工条目补充说明/标签/日期
+    if (!prev.desc && f.desc) prev.desc = f.desc;
+    if (!prev.date && f.date) prev.date = f.date;
+    f.tags.forEach((t) => { if (!prev.tags.includes(t)) prev.tags.push(t); });
+    if (!prev.sha256 && f.sha256) prev.sha256 = f.sha256;
+  });
+  allFiles = Array.from(seen.values());
+  renderStats(autoError);
+  renderTags();
+  render();
+}
+
+/* ============================================================================
+ * ④ 渲染
+ * ========================================================================== */
+function renderStats(error) {
+  const total = allFiles.length;
+  const bytes = allFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+  $("#stat-total").textContent = String(total);
+  $("#stat-size").textContent = bytes ? formatSize(bytes) : "—";
+  const src = $("#stat-source");
+  if (error) {
+    src.textContent = "自动列目录失败：" + error;
+    src.style.color = "var(--warn)";
+  } else if (SITE.mode === "release") {
+    src.textContent = "来源：Releases 附件";
+  } else if (SITE.mode === "both") {
+    src.textContent = "来源：仓库文件 + Releases";
+  } else {
+    src.textContent = "来源：仓库文件";
+  }
+}
+
+function collectTags() {
+  const counter = new Map();
+  allFiles.forEach((f) => f.tags.forEach((t) => counter.set(t, (counter.get(t) || 0) + 1)));
+  return Array.from(counter.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh"));
+}
+
+function renderTags() {
+  const box = $("#tags");
+  const tags = collectTags();
+  if (!tags.length) { box.innerHTML = ""; return; }
+  box.innerHTML = tags.map(([tag, n]) =>
+    '<button class="tag" type="button" data-tag="' + esc(tag) + '" aria-pressed="' +
+    (activeTags.has(tag) ? "true" : "false") + '">' + esc(tag) + " · " + n + "</button>"
+  ).join("");
+}
+
+function matches(item, query) {
+  if (activeTags.size) {
+    let hit = false;
+    item.tags.forEach((t) => { if (activeTags.has(t)) hit = true; });
+    if (!hit) return false;
+  }
+  if (!query) return true;
+  const hay = (item.name + " " + item.desc + " " + item.tags.join(" ")).toLowerCase();
+  return query.split(/\s+/).filter(Boolean).every((word) => hay.includes(word.toLowerCase()));
+}
+
+function sortList(list, mode) {
+  const arr = list.slice();
+  if (mode === "name") arr.sort((a, b) => a.name.localeCompare(b.name, "zh", { numeric: true }));
+  else if (mode === "size-desc") arr.sort((a, b) => (b.size || 0) - (a.size || 0));
+  else if (mode === "size-asc") arr.sort((a, b) => (a.size || 0) - (b.size || 0));
+  else if (mode === "date-desc") {
+    arr.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  }
+  return arr;
+}
+
+function cardHtml(f) {
+  const meta = [];
+  if (f.size) meta.push(formatSize(f.size));
+  if (f.date) meta.push(formatDate(f.date));
+  if (f.source === "release" && f.tag) meta.push(f.tag);
+  const chips = f.tags.map((t) => '<span class="chip">' + esc(t) + "</span>").join("");
+  // 纯文本类文件浏览器会直接打开而不是下载，用新标签页打开，避免把本站顶掉
+  const inline = INLINE_EXT.has(extOf(f.name));
+  const linkTarget = inline ? ' target="_blank" rel="noopener"' : "";
+  const mirrorBtns = (SITE.mirrors || []).map((m, i) =>
+    '<button class="btn btn-ghost btn-text" type="button" data-copy="' + esc(m.prefix + f.downloadUrl) +
+    '" title="复制 ' + esc(m.label) + ' 链接">' + esc(m.label) + "</button>"
+  ).join("");
+
+  return '' +
+    '<article class="card" data-name="' + esc(f.name) + '">' +
+      '<div class="card-head">' + badgeOf(f.name) +
+        '<div class="card-title">' +
+          '<h3 title="' + esc(f.name) + '">' + esc(f.name) + "</h3>" +
+          '<div class="meta">' + (meta.length ? meta.map(esc).join('<span class="dot">·</span>') : "未知大小") + "</div>" +
+        "</div>" +
+      "</div>" +
+      (f.desc ? '<p class="desc">' + esc(f.desc) + "</p>" : "") +
+      (chips ? '<div class="card-tags">' + chips + "</div>" : "") +
+      '<div class="card-actions">' +
+        '<a class="btn btn-primary" href="' + esc(f.downloadUrl) + '" download' + linkTarget + '>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></svg>' +
+          "下载</a>" +
+        '<button class="btn btn-ghost" type="button" data-copy="' + esc(f.downloadUrl) + '" title="复制下载链接" aria-label="复制下载链接">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>' +
+        "</button>" +
+        mirrorBtns +
+        '<span class="spacer"></span>' +
+        '<a class="btn btn-ghost" href="' + esc(f.viewUrl) + '" target="_blank" rel="noopener" title="在 GitHub 上查看">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>' +
+        "</a>" +
+      "</div>" +
+      (SITE.showSha256 && f.sha256
+        ? '<div class="sha" title="SHA-256 校验值"><code>' + esc(f.sha256) + "</code></div>"
+        : "") +
+    "</article>";
+}
+
+function render() {
+  const query = $("#q").value.trim();
+  const mode = $("#sort").value;
+  const grid = $("#grid");
+  const list = sortList(allFiles.filter((f) => matches(f, query)), mode);
+
+  grid.setAttribute("aria-busy", "false");
+
+  if (!allFiles.length) {
+    const uploadUrl = "https://github.com/" + SITE.owner + "/" + SITE.repo + "/upload/" +
+      SITE.branch + "/" + String(SITE.filesPath || "").replace(/^\/+|\/+$/g, "");
+    grid.innerHTML =
+      '<div class="empty"><div class="big">' + ICON.folder + '</div><h3>还没有文件</h3>' +
+      "<p>把文件传到仓库的 <code>" + esc(SITE.filesPath || "/") + "</code> 目录，刷新这一页就会自动出现。" +
+      "（GitHub 网页：Add file → Upload files）</p>" +
+      '<p style="margin-top:14px"><a class="btn btn-primary" href="' + esc(uploadUrl) +
+      '" target="_blank" rel="noopener">去上传文件</a></p></div>';
+    return;
+  }
+  if (!list.length) {
+    grid.innerHTML =
+      '<div class="empty"><div class="big">' + ICON.search + '</div><h3>没有匹配的文件</h3>' +
+      "<p>换个关键词，或点掉上面的标签筛选试试。</p></div>";
+    return;
+  }
+  grid.innerHTML = list.map(cardHtml).join("");
+  $("#stat-total").textContent = String(allFiles.length);
+}
+
+/* ============================================================================
+ * ⑤ 交互
+ * ========================================================================== */
+let toastTimer = null;
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    toast("已复制链接");
+  } catch (_) {
+    toast("复制失败，请手动选中链接");
+  }
+}
+
+function applyTheme(mode) {
+  const root = document.documentElement;
+  if (mode === "auto") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", mode);
+  const dark = mode === "dark" ||
+    (mode === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  $("#theme-icon").innerHTML = dark
+    ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>'
+    : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
+  try { localStorage.setItem("dl-theme", mode); } catch (_) {}
+}
+
+function initTheme() {
+  let saved = "auto";
+  try { saved = localStorage.getItem("dl-theme") || "auto"; } catch (_) {}
+  applyTheme(saved);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    let now = "auto";
+    try { now = localStorage.getItem("dl-theme") || "auto"; } catch (_) {}
+    if (now === "auto") applyTheme("auto");
+  });
+}
+
+function nextTheme() {
+  let now = "auto";
+  try { now = localStorage.getItem("dl-theme") || "auto"; } catch (_) {}
+  const order = ["auto", "light", "dark"];
+  applyTheme(order[(order.indexOf(now) + 1) % order.length]);
+  toast("主题：" + ({ auto: "跟随系统", light: "浅色", dark: "深色" })[
+    order[(order.indexOf(now) + 1) % order.length]
+  ]);
+}
+
+function applyStaticConfig() {
+  document.title = SITE.title;
+  $("#site-title").textContent = SITE.title;
+  $("#site-sub").textContent = SITE.subtitle;
+  $("#hero-title").textContent = SITE.heroTitle;
+  $("#hero-desc").textContent = SITE.heroDesc;
+  $("#footer-name").textContent = SITE.title;
+  $("#year").textContent = String(new Date().getFullYear());
+  const repo = repoHome();
+  $("#repo-btn").addEventListener("click", () => window.open(repo, "_blank", "noopener"));
+  $("#footer-repo").href = repo;
+}
+
+function bindEvents() {
+  $("#theme-btn").addEventListener("click", nextTheme);
+
+  let typing = null;
+  $("#q").addEventListener("input", () => {
+    clearTimeout(typing);
+    typing = setTimeout(render, 90);
+  });
+
+  $("#sort").addEventListener("change", render);
+
+  $("#tags").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tag");
+    if (!btn) return;
+    const tag = btn.dataset.tag;
+    if (activeTags.has(tag)) activeTags.delete(tag);
+    else activeTags.add(tag);
+    renderTags();
+    render();
+  });
+
+  $("#grid").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-copy]");
+    if (btn) copyText(btn.dataset.copy);
+  });
+
+  $("#refresh-btn").addEventListener("click", async () => {
+    toast("正在刷新…");
+    await buildList(true);
+    toast("已是最新");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const typingInField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (e.key === "/" && !typingInField) {
+      e.preventDefault();
+      $("#q").focus();
+    } else if (e.key === "Escape" && document.activeElement === $("#q")) {
+      $("#q").value = "";
+      $("#q").blur();
+      render();
+    }
+  });
+
+  const toTop = $("#to-top");
+  window.addEventListener("scroll", () => {
+    toTop.classList.toggle("show", window.scrollY > 480);
+  }, { passive: true });
+  toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+}
+
+/* ============================================================================
+ * ⑥ 启动
+ * ========================================================================== */
+(async function main() {
+  initTheme();
+  applyStaticConfig();
+  bindEvents();
+
+  // 没填 owner/repo 时给个提示，避免上线后一脸问号
+  if (!SITE.owner || SITE.owner === "YOUR_NAME" || !SITE.repo || SITE.repo === "YOUR_REPO") {
+    toast("提示：请先在 index.html 里填写 owner / repo");
+  }
+
+  await buildList();
+})();
+</script>
+</body>
+</html>
