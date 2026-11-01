@@ -587,28 +587,67 @@ function normalize(entry, source) {
   return item;
 }
 
-/* 自动列出仓库目录：GitHub 公开 API，匿名每小时 60 次，够个人用 */
+/* 自动列出仓库文件：一次请求拿回整棵树（含子目录），不用担心 files/ 里再套文件夹 */
 const SITE_FILE_RE = /^(index\.html|files\.json|readme(\.[a-z0-9]+)?|license(\.[a-z0-9]+)?|cname|favicon\.ico|\.gitkeep|\.nojekyll)$/i;
 
-async function fetchContents(dir) {
-  const api = "https://api.github.com/repos/" + SITE.owner + "/" + SITE.repo +
-              "/contents/" + dir + "?ref=" + encodeURIComponent(SITE.branch);
+function treeApi() {
+  return "https://api.github.com/repos/" + SITE.owner + "/" + SITE.repo +
+         "/git/trees/" + encodeURIComponent(SITE.branch) + "?recursive=1";
+}
+
+/* 主数据源：GitHub 的 git trees 接口（1 次请求拿到所有文件 + 大小） */
+async function fetchTree() {
   let res;
   try {
-    res = await fetch(api, { headers: { Accept: "application/vnd.github+json" } });
+    res = await fetch(treeApi(), { headers: { Accept: "application/vnd.github+json" } });
   } catch (_) {
     throw new Error("连不上 GitHub（网络或代理问题）");
   }
-  if (res.status === 404) return { status: 404, list: [] };          // 目录不存在 / 仓库还是空的
+  if (res.status === 404) return { status: 404, list: [] };   // 仓库还是空的（没有提交）
   if (res.status === 403 || res.status === 429) {
-    throw new Error("GitHub 接口调用次数用完了（匿名每小时 60 次），过一会儿再刷新");
+    throw new Error("GitHub 接口调用次数用完了（匿名每小时 60 次），已自动换备用接口");
   }
-  if (!res.ok) throw new Error("列出仓库目录失败：HTTP " + res.status);
+  if (!res.ok) throw new Error("列出仓库文件失败：HTTP " + res.status);
   const data = await res.json();
-  return { status: 200, list: Array.isArray(data) ? data : [] };
+  return { status: 200, list: Array.isArray(data.tree) ? data.tree : [] };
 }
 
-/* 列目录结果在本地缓存 10 分钟：省 GitHub 匿名额度，限流时还能拿旧数据兜底 */
+/* 备用源 1：ungh.cc（第三方 GitHub 只读代理，CORS 全开、基本不限流） */
+async function fetchUngh() {
+  const res = await fetch("https://ungh.cc/repos/" + SITE.owner + "/" + SITE.repo + "/files/" + SITE.branch);
+  if (!res.ok) throw new Error("备用接口 ungh 失败：HTTP " + res.status);
+  const data = await res.json();
+  return (data.files || []).map((f) => ({ path: f.path, size: f.size }));
+}
+
+/* 备用源 2：jsDelivr 的扁平文件列表（同样免密钥，但新增文件有缓存延迟） */
+async function fetchJsdelivr() {
+  const res = await fetch("https://data.jsdelivr.com/v1/packages/gh/" + SITE.owner + "/" + SITE.repo +
+                          "@" + SITE.branch + "?structure=flat");
+  if (!res.ok) throw new Error("备用接口 jsDelivr 失败：HTTP " + res.status);
+  const data = await res.json();
+  return (data.files || []).map((f) => ({ path: String(f.name || "").replace(/^\//, ""), size: f.size }));
+}
+
+/* 把「仓库相对路径 + 大小」变成卡片数据；子文件夹名自动变成分类标签 */
+function mapRepoEntries(entries, dir) {
+  const prefix = dir ? dir + "/" : "";
+  const out = [];
+  entries.forEach((e) => {
+    const path = String(e.path || "").replace(/^\/+/, "");
+    if (!path || (prefix && path.indexOf(prefix) !== 0)) return;
+    const rel = prefix ? path.slice(prefix.length) : path;
+    if (!rel || /(^|\/)\./.test(rel)) return;          // 跳过 .git 之类的隐藏路径
+    const parts = rel.split("/");
+    if (!prefix && parts.length > 1) return;           // 没设 filesPath 时只看仓库根目录
+    if (!prefix && SITE_FILE_RE.test(rel)) return;     // 跳过站点自己的文件
+    const name = parts.pop();
+    out.push(normalize({ name: name, path: path, size: e.size, tags: parts }, "repo"));
+  });
+  return out.filter(Boolean);
+}
+
+/* 列目录结果在本地缓存 10 分钟：省 GitHub 匿名额度，接口全挂时还能拿旧数据兜底 */
 const LIST_CACHE_TTL = 10 * 60 * 1000;
 function listCacheKey() {
   return "dl-list:" + SITE.owner + "/" + SITE.repo + "@" + SITE.branch + ":" + (SITE.filesPath || "");
@@ -629,31 +668,11 @@ function writeListCache(key, items) {
       ts: Date.now(),
       items: items.map((f) => ({
         name: f.name, path: f.path, size: f.size, date: f.date,
-        source: f.source, tag: f.tag, downloadUrl: f.downloadUrl, viewUrl: f.viewUrl, tags: []
+        source: f.source, tag: f.tag, downloadUrl: f.downloadUrl, viewUrl: f.viewUrl,
+        tags: (f.tags || []).slice()
       }))
     }));
   } catch (_) { /* 隐私模式 / 配额满就跳过缓存 */ }
-}
-
-/* 备用数据源：jsDelivr 的扁平文件列表，几乎不限流，但没有修改时间，超大仓库会被拒 */
-async function listViaJsdelivr(dir) {
-  const api = "https://data.jsdelivr.com/v1/packages/gh/" + SITE.owner + "/" + SITE.repo +
-              "@" + SITE.branch + "?structure=flat";
-  const res = await fetch(api);
-  if (!res.ok) throw new Error("备用接口也失败了：HTTP " + res.status);
-  const data = await res.json();
-  const all = Array.isArray(data.files) ? data.files : [];
-  if (!all.length) return [];   // 空仓库 / 仓库不存在，交给页面显示空状态
-  const prefix = dir ? "/" + dir + "/" : "/";
-  return all
-    .filter((f) => typeof f.name === "string" && f.name.indexOf(prefix) === 0)
-    .filter((f) => {
-      const rel = f.name.slice(prefix.length);
-      return rel && rel.indexOf("/") === -1 && !/^\./.test(rel)
-        && !(prefix === "/" && SITE_FILE_RE.test(rel));
-    })
-    .map((f) => normalize({ name: f.name.slice(prefix.length), path: f.name.slice(1), size: f.size, tags: [] }, "repo"))
-    .filter(Boolean);
 }
 
 async function listRepoFiles(force) {
@@ -662,37 +681,30 @@ async function listRepoFiles(force) {
   const cached = force ? null : readListCache(key);
   if (cached && Date.now() - cached.ts < LIST_CACHE_TTL) return cached.items;
 
-  let items = [];
+  let items = null;
+  let firstError = null;
+
   try {
-    let base = dir;
-    let got = await fetchContents(dir);
-    // files/ 还没建的时候，退一步列仓库根目录：把文件丢在根上也能显示
-    if (got.status === 404 && dir) {
-      got = await fetchContents("");
-      base = "";
-    }
-    if (got.status !== 404) {   // 404 = 空仓库，什么都还没有
-      items = got.list
-        .filter((it) => it.type === "file"
-          && !/^\./.test(it.name)
-          && !(base === "" && SITE_FILE_RE.test(it.name)))
-        .map((it) => normalize({
-          name: it.name,
-          path: base ? base + "/" + it.name : it.name,
-          size: it.size,
-          tags: []
-        }, "repo"))
-        .filter(Boolean);
-    }
+    const got = await fetchTree();
+    items = got.status === 404 ? [] : mapRepoEntries(got.list.filter((t) => t.type === "blob"), dir);
   } catch (err) {
-    // GitHub 挂了 / 匿名额度用完：先用 jsDelivr 顶上，再不行就退回旧缓存
+    firstError = err;
+  }
+
+  // 主接口挂了（限流 / 被墙 / 网络抖动）就换备用源，再不行用上次的缓存
+  const backups = [fetchUngh, fetchJsdelivr];
+  for (let i = 0; items === null && i < backups.length; i++) {
     try {
-      items = await listViaJsdelivr(dir);
+      items = mapRepoEntries(await backups[i](), dir);
     } catch (_) {
-      if (cached) return cached.items;
-      throw err;
+      /* 换下一个 */
     }
   }
+  if (items === null) {
+    if (cached) return cached.items;
+    throw firstError || new Error("列不出文件，请稍后刷新");
+  }
+
   writeListCache(key, items);
   return items;
 }
